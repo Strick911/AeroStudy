@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroStudy v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap');
+:root {
+  --bg:#0b0e14; --surface:#111620; --panel:#181f2e; --border:#1e2d45;
+  --amber:#e8a22b; --amber-dim:#7a4f0d; --blue:#2e7de0; --blue-dim:#1a3d6b;
+  --green:#3ecf6a; --green-dim:#1a4d30; --red:#e05050; --red-dim:#5a1a1a;
+  --text:#d4dce8; --muted:#5a6a80;
+  --mono:'Share Tech Mono',monospace; --sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+/* scrollbars */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* NAV */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-family:var(--mono);font-size:14px;color:var(--amber);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.logo svg{width:18px;height:18px}
+.nav-airport{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.nav-airport span{color:var(--text)}
+.nav-spacer{flex:1}
+.nav-progress{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.pbar{width:80px;height:4px;background:var(--border);border-radius:2px}
+.pbar-fill{height:100%;background:var(--green);border-radius:2px;transition:width .4s}
+.nav-btn{padding:6px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.nav-btn:hover{border-color:var(--amber-dim);color:var(--amber)}
+.nav-btn.active{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+/* LAYOUT */
+.app{display:flex;flex:1;overflow:hidden}
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.stabs{display:flex;border-bottom:1px solid var(--border)}
+.stab{flex:1;padding:9px 0;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.stab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.stab:hover:not(.active){color:var(--text)}
+.sbody{flex:1;overflow-y:auto;padding:6px 0}
+.grp-hdr{padding:6px 12px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.grp-hdr:hover{color:var(--text)}
+.badge{background:var(--border);border-radius:10px;padding:1px 6px;font-size:10px;color:var(--muted)}
+.badge.done{background:var(--green-dim);color:var(--green)}
+.chart-item{padding:7px 12px 7px 18px;cursor:pointer;border-left:2px solid transparent;display:flex;align-items:center;gap:8px;transition:all .15s}
+.chart-item:hover{background:var(--panel)}
+.chart-item.active{background:var(--panel);border-left-color:var(--amber)}
+.ci-name{font-size:12px;flex:1;line-height:1.3}
+.ci-rwy{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.ci-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0}
+.ci-dot.done{background:var(--green)}
+.ci-dot.partial{background:var(--amber)}
+.grp-items{}
+.grp.collapsed .grp-items{display:none}
+.chev{transition:transform .2s}
+.grp.collapsed .chev{transform:rotate(-90deg)}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.mhdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;flex-shrink:0}
+.mhdr-type{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--blue);margin-bottom:3px}
+.mhdr-title{font-family:var(--mono);font-size:17px;color:var(--amber);letter-spacing:1px}
+.mhdr-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.ptabs{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.ptab{padding:5px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;transition:all .15s;display:flex;align-items:center;gap:5px}
+.ptab:hover{border-color:var(--amber-dim);color:var(--text)}
+.ptab.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.ptab .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.mbody{flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:1fr 320px;gap:18px;align-content:start}
+/* CHART */
+.chart-box{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.chart-box-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.chart-img-wrap{background:#0d1520;min-height:360px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.chart-img-wrap img{max-width:100%;max-height:520px;object-fit:contain;display:block}
+.chart-img-wrap canvas{max-width:100%;display:block}
+/* RIGHT */
+.rcol{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.card-hdr{padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.card-body{padding:12px}
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kitem .kl{font-size:10px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:1px}
+.kitem .kv{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.sbns{display:flex;gap:7px}
+.sbn{flex:1;padding:7px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.sbn:hover{border-color:var(--amber-dim);color:var(--text)}
+.sbn.pend{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.sbn.done{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+textarea.narea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px;resize:none;min-height:80px;outline:none;transition:border-color .2s}
+textarea.narea:focus{border-color:var(--blue)}
+.nsave{margin-top:7px;padding:5px 12px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:4px;color:var(--blue);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s}
+.nsave:hover{background:var(--blue);color:#fff}
+/* EMPTY STATE */
+.empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:13px;min-height:300px;flex-direction:column;gap:12px}
+/* MODAL OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(700px,95vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--mono);font-size:14px;color:var(--amber);letter-spacing:1px}
+.modal-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;padding:2px 6px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+/* FORMS */
+.field{margin-bottom:14px}
+.field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}
+.field select option{background:var(--bg)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.btn{padding:8px 16px;border-radius:4px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1px solid;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-amber{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.btn-amber:hover{background:var(--amber);color:#000}
+.btn-blue{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.btn-blue:hover{background:var(--blue);color:#fff}
+.btn-red{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--muted)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.sep{border:none;border-top:1px solid var(--border);margin:16px 0}
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.tbl td{padding:7px 8px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--panel)}
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border);border-radius:6px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--amber);background:var(--amber-dim)20}
+.upload-zone p{color:var(--muted);font-size:13px;margin-top:8px}
+/* PAGES GRID */
+.pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px}
+.page-thumb{border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .15s;background:var(--bg);position:relative}
+.page-thumb:hover{border-color:var(--amber)}
+.page-thumb.selected{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-dim)}
+.page-thumb canvas{width:100%;display:block}
+.page-thumb .pg-num{text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted);padding:3px;border-top:1px solid var(--border)}
+.page-thumb .pg-chk{position:absolute;top:4px;right:4px;width:18px;height:18px;background:var(--amber);border-radius:3px;display:flex;align-items:center;justify-content:center;color:#000;font-size:11px;display:none}
+.page-thumb.selected .pg-chk{display:flex}
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green-dim);border:1px solid var(--green);border-radius:6px;padding:9px 16px;font-family:var(--mono);font-size:12px;color:var(--green);opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:300}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+/* SUPABASE SETUP BANNER */
+.setup-banner{background:var(--amber-dim);border-bottom:1px solid var(--amber);padding:8px 16px;font-family:var(--mono);font-size:11px;color:var(--amber);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.setup-banner.hidden{display:none}
+.setup-banner a{color:var(--amber);text-decoration:underline;cursor:pointer}
+/* RESPONSIVE */
+@media(max-width:700px){
+  .mbody{grid-template-columns:1fr}
+  .rcol{display:contents}
+  .sidebar{width:180px}
+}
+/* PROC EDITOR INLINE */
+.proc-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.proc-row:last-child{border-bottom:none}
+.proc-row input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;padding:5px 8px;outline:none}
+.proc-row input:focus{border-color:var(--blue)}
+/* STEP INDICATORS */
+.steps{display:flex;align-items:center;gap:0;margin-bottom:20px}
+.step{display:flex;align-items:center;gap:6px;flex:1}
+.step-n{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0}
+.step.active .step-n{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.step.done-s .step-n{border-color:var(--green);color:var(--green);background:var(--green-dim)}
+.step-label{font-size:11px;color:var(--muted)}
+.step.active .step-label{color:var(--text)}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 4px}
+/* loading spinner */
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- SETUP BANNER -->
+<div class="setup-banner" id="setup-banner">
+  ⚠ Sincronización desactivada. <a onclick="openModal('supabase-modal')">Conecta Supabase</a> para guardar entre dispositivos.
+  &nbsp;|&nbsp; <a onclick="closeBanner()">Usar solo localmente</a>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    AEROSTUDY
+  </div>
+  <div class="nav-airport" id="nav-airport">ICAO: <span id="nav-icao">—</span></div>
+  <div class="nav-spacer"></div>
+  <div class="nav-progress">
+    <span id="prog-text">0/0</span>
+    <div class="pbar"><div class="pbar-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <button class="nav-btn" onclick="openModal('airport-modal')">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+    SEDE
+  </button>
+  <button class="nav-btn" onclick="openModal('import-modal')">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    IMPORTAR PDF
+  </button>
+  <button class="nav-btn" onclick="openModal('supabase-modal')">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    SYNC
+  </button>
+</nav>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="stabs" id="stabs"></div>
+    <div class="sbody" id="sbody">
+      <div style="padding:20px 14px;color:var(--muted);font-family:var(--mono);font-size:11px;line-height:1.6">
+        Configura tu sede<br>e importa tus PDFs<br>para comenzar.
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="mhdr" id="mhdr">
+      <div class="mhdr-type" id="hdr-type">— AEROSTUDY —</div>
+      <div class="mhdr-title" id="hdr-title">Configura tu sede para comenzar</div>
+      <div class="mhdr-sub" id="hdr-sub">Usa el botón SEDE en la barra superior</div>
+      <div class="ptabs" id="ptabs"></div>
+    </div>
+    <div class="mbody" id="mbody">
+      <div class="empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" opacity=".3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Selecciona una carta del panel izquierdo
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: AIRPORT SETUP
+════════════════════════════════════════════════════ -->
+<div class="overlay hidden" id="airport-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-hdr">
+      <span class="modal-title">CONFIGURAR SEDE</span>
+      <button class="modal-close" onclick="closeModal('airport-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="row2">
+        <div class="field"><label>ICAO</label><input id="ap-icao" placeholder="SKBO" maxlength="4" style="text-transform:uppercase"></div>
+        <div class="field"><label>Nombre del aeropuerto</label><input id="ap-name" placeholder="El Dorado"></div>
+      </div>
+
+      <hr class="sep">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px">CATEGORÍAS DE DOCUMENTOS</span>
+        <button class="btn btn-ghost" onclick="addCategory()" style="font-size:10px;padding:4px 10px">+ AGREGAR</button>
+      </div>
+      <div id="cat-list"></div>
+
+      <hr class="sep">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px">PISTAS (RWY)</span>
+        <button class="btn btn-ghost" onclick="addRwy()" style="font-size:10px;padding:4px 10px">+ AGREGAR</button>
+      </div>
+      <div id="rwy-list"></div>
+
+      <hr class="sep">
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal('airport-modal')">Cancelar</button>
+        <button class="btn btn-amber" onclick="saveAirport()">Guardar sede</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: IMPORT PDF
+════════════════════════════════════════════════════ -->
+<div class="overlay hidden" id="import-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">IMPORTAR PDF</span>
+      <button class="modal-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step indicators -->
+      <div class="steps" id="import-steps">
+        <div class="step active" id="step1"><div class="step-n">1</div><span class="step-label">Subir PDF</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step2"><div class="step-n">2</div><span class="step-label">Seleccionar páginas</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step3"><div class="step-n">3</div><span class="step-label">Asignar datos</span></div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div id="import-step1">
+        <div class="row2" style="margin-bottom:14px">
+          <div class="field">
+            <label>CATEGORÍA</label>
+            <select id="imp-cat"></select>
+          </div>
+          <div class="field">
+            <label>PISTA (RWY)</label>
+            <select id="imp-rwy"></select>
+          </div>
+        </div>
+        <div class="upload-zone" id="drop-zone" onclick="document.getElementById('pdf-input').click()"
+          ondragover="e=>e.preventDefault()" ondrop="handleDrop(event)">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <p>Haz clic o arrastra tu PDF aquí</p>
+          <p style="font-size:11px;margin-top:4px;font-family:var(--mono)">SID · STAR · IAC · AD</p>
+        </div>
+        <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="loadPDF(event)">
+        <div id="pdf-loading" style="display:none;text-align:center;padding:20px;font-family:var(--mono);font-size:12px;color:var(--muted)">
+          <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="margin-bottom:8px"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-dasharray="28" stroke-dashoffset="10"/></svg><br>
+          Renderizando páginas...
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="import-step2" style="display:none">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Selecciona las páginas que corresponden a esta carta (pueden ser varias):</p>
+        <div class="pages-grid" id="pages-grid"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px;gap:8px">
+          <button class="btn btn-ghost" onclick="goStep(1)">← Atrás</button>
+          <button class="btn btn-amber" id="btn-step2-next" onclick="goStep(3)" disabled>Continuar →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div id="import-step3" style="display:none">
+        <div class="row2">
+          <div class="field"><label>NOMBRE DE LA CARTA</label><input id="imp-chart-name" placeholder="GALAN 2A"></div>
+          <div class="field"><label>PISTA</label><select id="imp-chart-rwy"></select></div>
+        </div>
+        <hr class="sep">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px">PROCEDIMIENTOS</span>
+          <button class="btn btn-ghost" onclick="addProcRow()" style="font-size:10px;padding:4px 10px">+ AGREGAR</button>
+        </div>
+        <div id="proc-rows"></div>
+        <hr class="sep">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">DATOS CLAVE (OPCIONALES)</div>
+        <div id="kdata-rows"></div>
+        <button class="btn btn-ghost" onclick="addKdataRow()" style="font-size:10px;padding:4px 10px;margin-bottom:14px">+ DATO</button>
+        <hr class="sep">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <button class="btn btn-ghost" onclick="goStep(2)">← Atrás</button>
+          <button class="btn btn-amber" onclick="finishImport()">✓ Guardar carta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: SUPABASE SETUP
+════════════════════════════════════════════════════ -->
+<div class="overlay hidden" id="supabase-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr">
+      <span class="modal-title">SINCRONIZACIÓN SUPABASE</span>
+      <button class="modal-close" onclick="closeModal('supabase-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+        Supabase es gratuito. Crea tu cuenta en <a href="https://supabase.com" target="_blank" style="color:var(--blue)">supabase.com</a>, luego crea un proyecto y pega tus credenciales aquí.
+      </p>
+      <div class="field"><label>SUPABASE URL</label><input id="sb-url" placeholder="https://xxxx.supabase.co" type="url"></div>
+      <div class="field"><label>ANON PUBLIC KEY</label><input id="sb-key" placeholder="eyJhbGci..." type="text"></div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:16px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.8">
+        En tu proyecto Supabase, ejecuta en el SQL Editor:<br><br>
+        <span style="color:var(--amber)">CREATE TABLE aerostudy (<br>
+        &nbsp;&nbsp;id TEXT PRIMARY KEY,<br>
+        &nbsp;&nbsp;data JSONB,<br>
+        &nbsp;&nbsp;updated_at TIMESTAMPTZ DEFAULT NOW()<br>
+        );</span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal('supabase-modal')">Cancelar</button>
+        <button class="btn btn-blue" onclick="testSupabase()">Probar conexión</button>
+        <button class="btn btn-amber" onclick="saveSupabase()">Guardar</button>
+      </div>
+      <div id="sb-status" style="margin-top:10px;font-family:var(--mono);font-size:11px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: EDIT CHART
+════════════════════════════════════════════════════ -->
+<div class="overlay hidden" id="edit-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr">
+      <span class="modal-title">EDITAR CARTA</span>
+      <button class="modal-close" onclick="closeModal('edit-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="row2">
+        <div class="field"><label>NOMBRE</label><input id="edit-name"></div>
+        <div class="field"><label>PISTA</label><select id="edit-rwy"></select></div>
+      </div>
+      <hr class="sep">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">PROCEDIMIENTOS</span>
+        <button class="btn btn-ghost" onclick="addEditProcRow()" style="font-size:10px;padding:4px 10px">+ AGREGAR</button>
+      </div>
+      <div id="edit-proc-rows"></div>
+      <hr class="sep">
+      <div style="display:flex;justify-content:space-between;gap:8px">
+        <button class="btn btn-red" onclick="deleteChart()">Eliminar carta</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="closeModal('edit-modal')">Cancelar</button>
+          <button class="btn btn-amber" onclick="saveEditChart()">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let state = {
+  airport: { icao:'', name:'' },
+  categories: ['SID','STAR','IAC','AD'],
+  runways: [],
+  charts: [],      // [{id,cat,rwy,name,procs:[{id,name,pages:[dataURL],keydata:{}}]}]
+  statuses: {},    // procId -> 'pending'|'done'
+  notes: {},       // procId -> string
+};
+
+let currentCat = null;
+let currentChart = null;
+let currentProc = null;
+let supabase = { url:'', key:'' };
+let pdfPages = [];     // array of dataURLs from loaded PDF
+let selectedPages = [];
+let pdfDoc = null;
+let editingChartId = null;
+
+// pdf.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  loadLocal();
+  if (supabase.url && supabase.key) {
+    document.getElementById('setup-banner').classList.add('hidden');
+    syncFromSupabase();
+  }
+  renderAll();
+}
+
+function loadLocal() {
+  try {
+    const s = localStorage.getItem('aerostudy_state');
+    if (s) Object.assign(state, JSON.parse(s));
+    const sb = localStorage.getItem('aerostudy_supabase');
+    if (sb) Object.assign(supabase, JSON.parse(sb));
+    if (supabase.url && supabase.key) document.getElementById('setup-banner').classList.add('hidden');
+  } catch(e){}
+}
+
+function saveLocal() {
+  localStorage.setItem('aerostudy_state', JSON.stringify(state));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════
+async function sbFetch(path, opts={}) {
+  const r = await fetch(supabase.url + '/rest/v1/' + path, {
+    headers: {
+      'apikey': supabase.key,
+      'Authorization': 'Bearer ' + supabase.key,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+      ...opts.headers
+    },
+    ...opts
+  });
+  return r;
+}
+
+async function syncToSupabase() {
+  if (!supabase.url || !supabase.key) return;
+  try {
+    await sbFetch('aerostudy?id=eq.main', {
+      method: 'DELETE'
+    });
+    await sbFetch('aerostudy', {
+      method: 'POST',
+      body: JSON.stringify({ id: 'main', data: state })
+    });
+    showToast('✓ Sincronizado en la nube');
+  } catch(e) { showToast('Error al sincronizar','err'); }
+}
+
+async function syncFromSupabase() {
+  if (!supabase.url || !supabase.key) return;
+  try {
+    const r = await sbFetch('aerostudy?id=eq.main&select=data');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d[0] && d[0].data) {
+      Object.assign(state, d[0].data);
+      saveLocal();
+      renderAll();
+      showToast('✓ Datos sincronizados');
+    }
+  } catch(e) {}
+}
+
+async function testSupabase() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  const st = document.getElementById('sb-status');
+  st.style.display = 'block';
+  st.style.color = 'var(--muted)';
+  st.textContent = 'Probando conexión...';
+  try {
+    const r = await fetch(url + '/rest/v1/aerostudy?limit=1', {
+      headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+    });
+    if (r.ok) {
+      st.style.color = 'var(--green)';
+      st.textContent = '✓ Conexión exitosa';
+    } else {
+      st.style.color = 'var(--red)';
+      st.textContent = '✗ Error: ' + r.status + ' — Verifica las credenciales o crea la tabla.';
+    }
+  } catch(e) {
+    st.style.color = 'var(--red)';
+    st.textContent = '✗ No se pudo conectar: ' + e.message;
+  }
+}
+
+function saveSupabase() {
+  supabase.url = document.getElementById('sb-url').value.trim();
+  supabase.key = document.getElementById('sb-key').value.trim();
+  localStorage.setItem('aerostudy_supabase', JSON.stringify(supabase));
+  document.getElementById('setup-banner').classList.add('hidden');
+  closeModal('supabase-modal');
+  showToast('Credenciales guardadas');
+  syncFromSupabase();
+}
+
+function closeBanner() {
+  document.getElementById('setup-banner').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AIRPORT SETUP
+// ═══════════════════════════════════════════════════════════════
+function openAirportModal() {
+  document.getElementById('ap-icao').value = state.airport.icao || '';
+  document.getElementById('ap-name').value = state.airport.name || '';
+  renderCatList();
+  renderRwyList();
+  openModal('airport-modal');
+}
+
+function renderCatList() {
+  const el = document.getElementById('cat-list');
+  el.innerHTML = state.categories.map((c,i) => `
+    <div class="proc-row">
+      <input value="${c}" onchange="state.categories[${i}]=this.value">
+      <button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="state.categories.splice(${i},1);renderCatList()">✕</button>
+    </div>`).join('');
+}
+
+function addCategory() {
+  state.categories.push('NUEVA');
+  renderCatList();
+}
+
+function renderRwyList() {
+  const el = document.getElementById('rwy-list');
+  el.innerHTML = state.runways.map((r,i) => `
+    <div class="proc-row">
+      <input value="${r}" onchange="state.runways[${i}]=this.value" placeholder="RWY 13R">
+      <button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="state.runways.splice(${i},1);renderRwyList()">✕</button>
+    </div>`).join('');
+}
+
+function addRwy() {
+  state.runways.push('RWY ');
+  renderRwyList();
+}
+
+function saveAirport() {
+  state.airport.icao = document.getElementById('ap-icao').value.trim().toUpperCase();
+  state.airport.name = document.getElementById('ap-name').value.trim();
+  // read current inputs
+  document.querySelectorAll('#cat-list input').forEach((el,i) => state.categories[i] = el.value.trim());
+  document.querySelectorAll('#rwy-list input').forEach((el,i) => state.runways[i] = el.value.trim());
+  state.categories = state.categories.filter(c=>c);
+  state.runways = state.runways.filter(r=>r);
+  saveLocal();
+  syncToSupabase();
+  closeModal('airport-modal');
+  renderAll();
+  showToast('✓ Sede guardada');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IMPORT PDF
+// ═══════════════════════════════════════════════════════════════
+function openImportModal() {
+  if (!state.airport.icao) { showToast('Primero configura tu sede','err'); openAirportModal(); return; }
+  // populate selects
+  const catSel = document.getElementById('imp-cat');
+  catSel.innerHTML = state.categories.map(c=>`<option>${c}</option>`).join('');
+  const rwySel = document.getElementById('imp-rwy');
+  rwySel.innerHTML = ['Todas'].concat(state.runways).map(r=>`<option>${r}</option>`).join('');
+  pdfPages = []; selectedPages = [];
+  goStep(1);
+  document.getElementById('pdf-input').value = '';
+  document.getElementById('pages-grid').innerHTML = '';
+  openModal('import-modal');
+}
+
+function closeImportModal() {
+  closeModal('import-modal');
+}
+
+async function loadPDF(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('pdf-loading').style.display = 'block';
+  const ab = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
+  pdfPages = [];
+  const grid = document.getElementById('pages-grid');
+  grid.innerHTML = '';
+
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const vp = page.getViewport({ scale: 0.5 });
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+    pdfPages.push(dataURL);
+
+    // thumb
+    const thumb = document.createElement('div');
+    thumb.className = 'page-thumb';
+    thumb.dataset.idx = i - 1;
+    thumb.innerHTML = `<canvas width="${vp.width}" height="${vp.height}"></canvas><div class="pg-num">Página ${i}</div><div class="pg-chk">✓</div>`;
+    thumb.querySelector('canvas').getContext('2d').drawImage(canvas, 0, 0);
+    thumb.onclick = () => togglePage(thumb, i - 1);
+    grid.appendChild(thumb);
+  }
+
+  document.getElementById('pdf-loading').style.display = 'none';
+  goStep(2);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    document.getElementById('pdf-input').files;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('pdf-input').files = dt.files;
+    loadPDF({ target: { files: [file] } });
+  }
+}
+
+function togglePage(el, idx) {
+  const i = selectedPages.indexOf(idx);
+  if (i >= 0) { selectedPages.splice(i, 1); el.classList.remove('selected'); }
+  else { selectedPages.push(idx); el.classList.add('selected'); }
+  document.getElementById('btn-step2-next').disabled = selectedPages.length === 0;
+}
+
+function goStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('import-step'+i).style.display = i===n ? '' : 'none';
+    const s = document.getElementById('step'+i);
+    s.className = 'step' + (i<n?' done-s':i===n?' active':'');
+  });
+  if (n === 3) prepStep3();
+  if (n === 1) {
+    document.getElementById('drop-zone').style.display = '';
+    document.getElementById('pdf-loading').style.display = 'none';
+  }
+}
+
+function prepStep3() {
+  // populate rwy select
+  const sel = document.getElementById('imp-chart-rwy');
+  sel.innerHTML = state.runways.map(r=>`<option>${r}</option>`).join('');
+  // default proc row
+  const rows = document.getElementById('proc-rows');
+  rows.innerHTML = '';
+  addProcRow();
+  // default kdata
+  document.getElementById('kdata-rows').innerHTML = '';
+}
+
+function addProcRow() {
+  const rows = document.getElementById('proc-rows');
+  const div = document.createElement('div');
+  div.className = 'proc-row';
+  div.innerHTML = `<input placeholder="Nombre del procedimiento (ej. GALAN 2A)">
+    <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px" onclick="this.parentElement.remove()">✕</button>`;
+  rows.appendChild(div);
+}
+
+function addKdataRow() {
+  const rows = document.getElementById('kdata-rows');
+  const div = document.createElement('div');
+  div.className = 'row2';
+  div.style.marginBottom = '8px';
+  div.innerHTML = `<input placeholder="Etiqueta (ej. FAF)">
+    <div style="display:flex;gap:6px"><input placeholder="Valor (ej. 8200 FT)">
+    <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px" onclick="this.parentElement.parentElement.remove()">✕</button></div>`;
+  rows.appendChild(div);
+}
+
+function finishImport() {
+  const name = document.getElementById('imp-chart-name').value.trim();
+  const rwy = document.getElementById('imp-chart-rwy').value;
+  const cat = document.getElementById('imp-cat').value;
+  if (!name) { showToast('Ingresa el nombre de la carta','err'); return; }
+
+  // collect procs
+  const procInputs = document.querySelectorAll('#proc-rows .proc-row input');
+  const procNames = Array.from(procInputs).map(i=>i.value.trim()).filter(v=>v);
+  if (procNames.length === 0) { showToast('Agrega al menos un procedimiento','err'); return; }
+
+  // collect kdata
+  const kdataRows = document.querySelectorAll('#kdata-rows .row2');
+  const keydata = {};
+  kdataRows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    if (inputs[0].value.trim()) keydata[inputs[0].value.trim()] = inputs[1].value.trim();
+  });
+
+  // selected page dataURLs
+  const pages = selectedPages.sort((a,b)=>a-b).map(i => pdfPages[i]);
+
+  const chartId = 'chart_' + Date.now();
+  const procs = procNames.map((n,i) => ({
+    id: 'proc_' + Date.now() + '_' + i,
+    name: n,
+    pages: i === 0 ? pages : [], // all pages to first proc by default
+    keydata
+  }));
+
+  state.charts.push({ id: chartId, cat, rwy, name, procs });
+  saveLocal();
+  syncToSupabase();
+  closeImportModal();
+
+  // switch to that category
+  currentCat = cat;
+  renderAll();
+  showToast('✓ Carta importada: ' + name);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EDIT CHART
+// ═══════════════════════════════════════════════════════════════
+function openEditModal(chartId) {
+  editingChartId = chartId;
+  const chart = state.charts.find(c=>c.id===chartId);
+  if (!chart) return;
+  document.getElementById('edit-name').value = chart.name;
+  const sel = document.getElementById('edit-rwy');
+  sel.innerHTML = state.runways.map(r=>`<option ${r===chart.rwy?'selected':''}>${r}</option>`).join('');
+  const rows = document.getElementById('edit-proc-rows');
+  rows.innerHTML = '';
+  chart.procs.forEach((p,i) => {
+    const div = document.createElement('div');
+    div.className = 'proc-row';
+    div.innerHTML = `<input value="${p.name}" id="edit-proc-${i}">
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px" onclick="this.parentElement.remove()">✕</button>`;
+    rows.appendChild(div);
+  });
+  openModal('edit-modal');
+}
+
+function addEditProcRow() {
+  const rows = document.getElementById('edit-proc-rows');
+  const div = document.createElement('div');
+  div.className = 'proc-row';
+  div.innerHTML = `<input placeholder="Nombre del procedimiento">
+    <button class="btn btn-ghost" style="padding:4px 8px;font-size:10px" onclick="this.parentElement.remove()">✕</button>`;
+  rows.appendChild(div);
+}
+
+function saveEditChart() {
+  const chart = state.charts.find(c=>c.id===editingChartId);
+  if (!chart) return;
+  chart.name = document.getElementById('edit-name').value.trim();
+  chart.rwy = document.getElementById('edit-rwy').value;
+  const procInputs = document.querySelectorAll('#edit-proc-rows input');
+  const newNames = Array.from(procInputs).map(i=>i.value.trim()).filter(v=>v);
+  // preserve existing procs, add new ones
+  chart.procs = newNames.map((n,i) => {
+    const ex = chart.procs[i];
+    return ex ? { ...ex, name: n } : { id: 'proc_'+Date.now()+'_'+i, name: n, pages: [], keydata: {} };
+  });
+  saveLocal(); syncToSupabase();
+  closeModal('edit-modal');
+  renderAll();
+  showToast('✓ Carta actualizada');
+}
+
+function deleteChart() {
+  if (!confirm('¿Eliminar esta carta?')) return;
+  state.charts = state.charts.filter(c=>c.id!==editingChartId);
+  currentChart = null; currentProc = null;
+  saveLocal(); syncToSupabase();
+  closeModal('edit-modal');
+  renderAll();
+  showToast('Carta eliminada');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderAll() {
+  // NAV
+  document.getElementById('nav-icao').textContent = state.airport.icao || '—';
+
+  // category tabs
+  const stabs = document.getElementById('stabs');
+  if (state.categories.length === 0) {
+    stabs.innerHTML = '';
+  } else {
+    if (!currentCat || !state.categories.includes(currentCat)) currentCat = state.categories[0];
+    stabs.innerHTML = state.categories.map(c =>
+      `<div class="stab ${c===currentCat?'active':''}" onclick="switchCat('${c}')">${c}</div>`
+    ).join('');
+  }
+
+  renderSidebar();
+  renderMainArea();
+  updateProgress();
+}
+
+function switchCat(cat) {
+  currentCat = cat;
+  currentChart = null; currentProc = null;
+  document.querySelectorAll('.stab').forEach(el => el.classList.toggle('active', el.textContent===cat));
+  renderSidebar();
+  renderMainArea();
+}
+
+function renderSidebar() {
+  const body = document.getElementById('sbody');
+  if (!currentCat) { body.innerHTML = ''; return; }
+  const charts = state.charts.filter(c => c.cat === currentCat);
+
+  if (charts.length === 0) {
+    body.innerHTML = `<div style="padding:16px 12px;color:var(--muted);font-family:var(--mono);font-size:10px;line-height:1.8">Sin cartas.<br>Usa IMPORTAR PDF<br>para agregar.</div>`;
+    return;
+  }
+
+  // group by rwy
+  const byRwy = {};
+  charts.forEach(c => { if (!byRwy[c.rwy]) byRwy[c.rwy]=[]; byRwy[c.rwy].push(c); });
+
+  let html = '';
+  for (const [rwy, items] of Object.entries(byRwy)) {
+    const total = items.reduce((s,c)=>s+c.procs.length,0);
+    const done = items.reduce((s,c)=>s+c.procs.filter(p=>state.statuses[p.id]==='done').length,0);
+    const gid = 'g_'+rwy.replace(/\s/g,'_');
+    html += `<div class="grp" id="${gid}">
+      <div class="grp-hdr" onclick="document.getElementById('${gid}').classList.toggle('collapsed')">
+        <span>${rwy}</span>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span class="badge ${done===total&&total>0?'done':''}">${done}/${total}</span>
+          <svg class="chev" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+        </div>
+      </div>
+      <div class="grp-items">`;
+    items.forEach(c => {
+      const pd = c.procs.filter(p=>state.statuses[p.id]==='done').length;
+      const pt = c.procs.length;
+      const dot = pd===pt&&pt>0?'done':pd>0?'partial':'';
+      const isActive = currentChart && currentChart.id===c.id;
+      html += `<div class="chart-item ${isActive?'active':''}" onclick="selectChart('${c.id}')">
+        <div class="ci-dot ${dot}"></div>
+        <div style="flex:1">
+          <div class="ci-name">${c.name}</div>
+          <div class="ci-rwy">${pt} proc${pt>1?'s':''}</div>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+  body.innerHTML = html;
+}
+
+function selectChart(id) {
+  currentChart = state.charts.find(c=>c.id===id) || null;
+  currentProc = currentChart ? currentChart.procs[0] : null;
+  renderSidebar();
+  renderMainArea();
+}
+
+function selectProc(id) {
+  currentProc = currentChart.procs.find(p=>p.id===id) || null;
+  document.querySelectorAll('.ptab').forEach(el => el.classList.toggle('active', el.dataset.pid===id));
+  renderProcContent();
+}
+
+function renderMainArea() {
+  if (!currentChart || !currentProc) {
+    document.getElementById('hdr-type').textContent = '— AEROSTUDY —';
+    document.getElementById('hdr-title').textContent = state.airport.icao ? state.airport.name || state.airport.icao : 'Configura tu sede para comenzar';
+    document.getElementById('hdr-sub').textContent = state.airport.icao ? 'Selecciona una carta' : 'Usa el botón SEDE en la barra superior';
+    document.getElementById('ptabs').innerHTML = '';
+    document.getElementById('mbody').innerHTML = `<div class="empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" opacity=".3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Selecciona una carta del panel izquierdo</div>`;
+    return;
+  }
+
+  document.getElementById('hdr-type').textContent = `${currentCat} — ${state.airport.icao}`;
+  document.getElementById('hdr-title').textContent = `${currentChart.rwy} · ${currentChart.name}`;
+  document.getElementById('hdr-sub').textContent = `${currentChart.procs.length} procedimiento${currentChart.procs.length>1?'s':''}`;
+
+  document.getElementById('ptabs').innerHTML = currentChart.procs.map(p =>
+    `<div class="ptab ${p.id===currentProc.id?'active':''}" data-pid="${p.id}" onclick="selectProc('${p.id}')">
+      <div class="dot"></div>${p.name}
+    </div>`
+  ).join('');
+
+  renderProcContent();
+}
+
+function renderProcContent() {
+  if (!currentProc) return;
+  const p = currentProc;
+  const status = state.statuses[p.id] || 'none';
+  const noteVal = state.notes[p.id] || '';
+
+  // chart image area
+  let chartHTML;
+  if (p.pages && p.pages.length > 0) {
+    chartHTML = `<div style="display:flex;flex-direction:column;gap:6px;width:100%">` +
+      p.pages.map((pg,i) => `<img src="${pg}" style="max-width:100%;border-radius:4px;display:block" alt="Página ${i+1}">`).join('') +
+      `</div>`;
+  } else {
+    chartHTML = `<div style="color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity=".4" style="display:block;margin:0 auto 8px"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 12h10M7 8h10M7 16h6"/></svg>
+      Sin imagen de carta.<br>Importa el PDF para verla aquí.
+    </div>`;
+  }
+
+  // key data
+  const kd = p.keydata || {};
+  const kdHTML = Object.keys(kd).length > 0
+    ? `<div class="kgrid">${Object.entries(kd).map(([k,v])=>`<div class="kitem"><div class="kl">${k}</div><div class="kv">${v}</div></div>`).join('')}</div>`
+    : `<div style="color:var(--muted);font-size:12px">Sin datos clave registrados.</div>`;
+
+  document.getElementById('mbody').innerHTML = `
+    <div class="chart-box">
+      <div class="chart-box-hdr">
+        <span>${p.name}</span>
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="openEditModal('${currentChart.id}')">✎ Editar</button>
+      </div>
+      <div class="chart-img-wrap" style="padding:${p.pages&&p.pages.length>0?'12px':'40px'}">${chartHTML}</div>
+    </div>
+
+    <div class="rcol">
+      <div class="card">
+        <div class="card-hdr">DATOS CLAVE</div>
+        <div class="card-body">${kdHTML}</div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr">ESTADO DE ESTUDIO</div>
+        <div class="card-body">
+          <div class="sbns">
+            <button class="sbn ${status==='pending'?'pend':''}" onclick="setStatus('${p.id}','pending')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>PENDIENTE
+            </button>
+            <button class="sbn ${status==='done'?'done':''}" onclick="setStatus('${p.id}','done')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>ESTUDIADO
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr">NOTAS DE ESTUDIO</div>
+        <div class="card-body">
+          <textarea class="narea" id="narea-${p.id}" placeholder="Agrega tus notas aquí...">${noteVal}</textarea>
+          <button class="nsave" onclick="saveNote('${p.id}')">Guardar nota</button>
+          <div id="nsaved-${p.id}" style="color:var(--green);font-family:var(--mono);font-size:11px;margin-top:6px;display:none">✓ Guardado</div>
+        </div>
+      </div>
+    </div>
+  `;
+  updateProgress();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function setStatus(procId, s) {
+  state.statuses[procId] = state.statuses[procId] === s ? 'none' : s;
+  saveLocal(); syncToSupabase();
+  renderProcContent();
+  renderSidebar();
+  if (state.statuses[procId]==='done') showToast('✓ Marcado como estudiado');
+}
+
+function saveNote(procId) {
+  const el = document.getElementById('narea-'+procId);
+  if (el) {
+    state.notes[procId] = el.value;
+    saveLocal(); syncToSupabase();
+    const s = document.getElementById('nsaved-'+procId);
+    if (s) { s.style.display='block'; setTimeout(()=>s.style.display='none',1800); }
+  }
+}
+
+function updateProgress() {
+  let total = 0, done = 0;
+  state.charts.forEach(c => c.procs.forEach(p => { total++; if (state.statuses[p.id]==='done') done++; }));
+  document.getElementById('prog-text').textContent = `${done}/${total}`;
+  document.getElementById('prog-fill').style.width = total>0 ? `${(done/total)*100}%` : '0%';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  if (id==='airport-modal') openAirportModal();
+  if (id==='import-modal') openImportModal();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+// close on overlay click
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); });
+});
+
+// ─── TOAST ────────────────────────────────────────────────────
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type==='err'?' err':'');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
